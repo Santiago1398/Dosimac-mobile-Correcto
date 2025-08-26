@@ -1,0 +1,105 @@
+{
+   "advertising": {
+      "isConnectable": true,
+      "manufacturerData": {},
+      "rawData": {
+         "CDVType": "ArrayBuffer",
+         "bytes": [],
+         "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      },
+      "serviceData": {},
+      "serviceUUIDs": [],
+      "txPowerLevel": -2147483648
+   },
+   "characteristics": [
+      {
+         "characteristic": "2a05",
+         "descriptors": [],
+         "properties": {},
+         "service": "1801"
+      },
+      {
+         "characteristic": "2a00",
+         "properties": {},
+         "service": "1800"
+      },
+      {
+         "characteristic": "2a01",
+         "properties": {},
+         "service": "1800"
+      },
+      {
+         "characteristic": "2aa6",
+         "properties": {},
+         "service": "1800"
+      },
+      {
+         "characteristic": "c301",
+         "descriptors": [],
+         "properties": {},
+         "service": "a002"
+      },
+      {
+         "characteristic": "c305",
+         "descriptors": [],
+         "properties": {},
+         "service": "a002"
+      },
+      {
+         "characteristic": "2a05",
+         "descriptors": [],
+         "properties": {},
+         "service": "1801"
+      },
+      {
+         "characteristic": "2a00",
+         "properties": {},
+         "service": "1800"
+      },
+      {
+         "characteristic": "2a01",
+         "properties": {},
+         "service": "1800"
+      },
+      {
+         "characteristic": "2aa6",
+         "properties": {},
+         "service": "1800"
+      },
+      {
+         "characteristic": "c301",
+         "descriptors": [],
+         "properties": {},
+         "service": "a002"
+      },
+      {
+         "characteristic": "c305",
+         "descriptors": [],
+         "properties": {},
+         "service": "a002"
+      }
+   ],
+   "id": "B0:B2:1C:A0:9D:E6",
+   "name": "DOSIMAC",
+   "rssi": -73,
+   "services": [
+      {
+         "uuid": "1801"
+      },
+      {
+         "uuid": "1800"
+      },
+      {
+         "uuid": "a002"
+      },
+      {
+         "uuid": "1801"
+      },
+      {
+         "uuid": "1800"
+      },
+      {
+         "uuid": "a002"
+      }
+   ]
+}

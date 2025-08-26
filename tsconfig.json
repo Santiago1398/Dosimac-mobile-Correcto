@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "jsx": "react",
+    "strict": false, // 🔧 Desactiva modo estricto completo
+    "noImplicitAny": false, // 🔧 Permite variables sin tipo
+    "strictNullChecks": false // 🔧 Permite null/undefined sin marcar error
+  },
+  "extends": "@react-native/typescript-config/tsconfig.json"
+}

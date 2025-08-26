@@ -1,0 +1,1 @@
+export {default as CerdoMaternidad} from './images/cerdo_sinfondo.png'
