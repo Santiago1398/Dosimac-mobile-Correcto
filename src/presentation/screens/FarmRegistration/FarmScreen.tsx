@@ -11,8 +11,8 @@ import { vglobal } from '../../../sharedTypes/globlaVars';
 import { farmStore } from '../../../stores/store';
 import { useTogglePasswordVisibility } from '../../hooks/useTogglePasswordVisibility';
 
-// import { MaterialCommunityIcons } from '@expo/vector-icons';
-// import Icon from 'react-native-vector-icons/MaterialIcons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+//import Icon from 'react-native-vector-icons/MaterialIcons';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { IonIcon } from '../../components/shared/IonIcon';
 
@@ -207,10 +207,17 @@ export const FarmScreen = ({ navigation, route }) => {
         <Appbar.BackAction onPress={navigation.goBack} />
         <Appbar.Content title={t('common:DetallesInstalacion')} />
         {/* <Appbar.Action icon="done" onPress={() => {}} /> */}
-        <Appbar.Action icon="delete" onPress={() => {
-          Alert.alert('Borrar granja', 'Desea borrar la granja', [{ text: 'OK', onPress: () => { deleteFarm() } }, { text: 'Cancelar', onPress: () => { } }])
-          //deleteFarm();
-        }} />
+        <Appbar.Action
+  icon={(props) => (
+    <MaterialCommunityIcons name="delete" size={props.size} color={props.color} />
+  )}
+  onPress={() => {
+    Alert.alert('Borrar granja', 'Desea borrar la granja', [
+      { text: 'OK', onPress: deleteFarm },
+      { text: 'Cancelar' },
+    ]);
+  }}
+/>
       </Appbar.Header>
 
       <View style={{ marginTop: 20, gap: 10, marginHorizontal: 10, paddingHorizontal: 10 }}>

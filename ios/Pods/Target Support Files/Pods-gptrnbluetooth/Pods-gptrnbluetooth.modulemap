@@ -1,0 +1,6 @@
+module Pods_gptrnbluetooth {
+  umbrella header "Pods-gptrnbluetooth-umbrella.h"
+
+  export *
+  module * { export * }
+}
