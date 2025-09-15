@@ -43,7 +43,7 @@ export const BottomTabNavigator = () => {
           shadowColor: 'transparent',
           // backgroundColor:'#9FFFFf',
           // marginTop:15,
-          height: 50,
+          height: 60,
 
 
 
