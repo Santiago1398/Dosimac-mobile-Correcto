@@ -10,7 +10,7 @@ import pl from './pl';
 import ru from './ru';
 import ko from './ko';
 import uk from './uk';
-import zhTW from './zhTW';
+import zhTW from './zh-TW';
 import PT from './pt-PT';
 import it from './it';
 

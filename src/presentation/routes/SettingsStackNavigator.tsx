@@ -15,7 +15,7 @@ const flagByLang: Record<string, string> = {
     pt: '🇵🇹 Português',
     'pt-PT': '🇵🇹 Português',
     fr: '🇫🇷 Français',
-    ca: ' Català',
+    ca: '🇪🇸 Català',
     pl: '🇵🇱 Polski',
     ru: '🇷🇺 Русский',
     ko: '🇰🇷 한국어',
