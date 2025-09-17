@@ -42,4 +42,8 @@ export default {
     NoSePuedeBorrarGranja: 'No es pot esborrar una granja nova',
     settings: 'Ajustos',
     softwareVersion: 'Versió de programari',
+    numeroCoral: 'Número de corral',
+    numeroMaquina: 'Número de màquina',
+    Enviar: 'Enviar',
+    Salir: 'Sortir',
 };

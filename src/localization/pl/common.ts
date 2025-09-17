@@ -12,7 +12,7 @@ export default {
     Grabar: 'Zapisz',
     EstadoStore: 'Stan store',
     Nodata: 'Brak danych',
-    DosimacRegistration: 'Rejestracja Dosimac',
+    DosimacRegistration: 'Rejestracja',
     NewDmMaternity: 'Nowy Dosimac macierzyństwo',
     DosimacG: 'Dosimac-G',
     DosimacI: 'Dosimac-I',
@@ -42,4 +42,9 @@ export default {
     NoSePuedeBorrarGranja: 'Nie można usunąć nowej farmy',
     settings: 'Ustawienia',
     softwareVersion: 'Wersja oprogramowania',
+    numeroCoral: 'Numer kojca',
+    numeroMaquina: 'Numer maszyny',
+    Enviar: 'Wyślij',
+    Salir: 'Wyjdź',
+
 };

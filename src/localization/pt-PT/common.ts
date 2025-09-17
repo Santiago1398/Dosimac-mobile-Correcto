@@ -12,7 +12,7 @@ export default {
     Grabar: 'Gravar',
     EstadoStore: 'Estado da store',
     Nodata: 'Sem dados',
-    DosimacRegistration: 'Registo Dosimac',
+    DosimacRegistration: 'Registo',
     NewDmMaternity: 'Novo Dosimac maternidade',
     DosimacG: 'Dosimac-G',
     DosimacI: 'Dosimac-I',
@@ -42,4 +42,8 @@ export default {
     NoSePuedeBorrarGranja: 'Não é possível eliminar uma quinta nova',
     settings: 'Definições',
     softwareVersion: 'Versão do software',
+    numeroCoral: 'Número do curral',
+    numeroMaquina: 'Número da máquina',
+    Enviar: 'Enviar',
+    Salir: 'Sair',
 }

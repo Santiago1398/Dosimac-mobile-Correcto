@@ -129,7 +129,7 @@ export const DRScanResultsScreen = ({ navigation, route }) => {
             <ActivityIndicator size="large" />
             <View>
 
-               <Text style={{ fontFamily: 'Roboto-Ligth', fontSize: 20 }}>Buscando equipos...</Text>
+               <Text style={{ fontFamily: 'Roboto-Ligth', fontSize: 20 }}>{t('common:SearchingDevices')}</Text>
 
 
             </View>
@@ -152,12 +152,12 @@ export const DRScanResultsScreen = ({ navigation, route }) => {
                <Portal>
                   <Dialog visible={visible} onDismiss={dohideDialog}>
                      <Dialog.Icon icon="warning" color="red" size={60} />
-                     <Dialog.Title style={{ color: 'red' }}>Aviso</Dialog.Title>
+                     <Dialog.Title style={{ color: 'red' }}>{t('common:Aviso')}</Dialog.Title>
                      <Dialog.Content>
-                        <Text variant="bodyLarge" >No hay dispositivos</Text>
+                        <Text variant="bodyLarge" >{t('common:No_hay_dispositivos')}</Text>
                      </Dialog.Content>
                      <Dialog.Actions>
-                        <Button onPress={dohideDialog}>Aceptar</Button>
+                        <Button onPress={dohideDialog}>{t('common:Aceptar')}</Button>
                      </Dialog.Actions>
                   </Dialog>
                </Portal>
@@ -185,7 +185,7 @@ export const DRScanResultsScreen = ({ navigation, route }) => {
 
             <View key={device.id} style={{ marginTop: 15 }}>
                {/* <Text >{device.id}   {device.name}</Text> */}
-               <MainButton onPress={() => navigation.navigate('DR-SETUP', { id: device.id,operacion:route.params.operacion })}
+               <MainButton onPress={() => navigation.navigate('DR-SETUP', { id: device.id, operacion: route.params.operacion })}
                   label={label}
                   size={3}
 

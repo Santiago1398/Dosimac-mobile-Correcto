@@ -49,6 +49,8 @@ export const SideMenuNavigator = () => {
             drawerActiveBackgroundColor: globalColors.primary,
             drawerActiveTintColor: 'white',
             drawerInactiveTintColor: globalColors.primary,
+            drawerLabelStyle: { flexShrink: 1 }, // permite elipsis sin romper diseño
+
 
             drawerStyle: {
                marginTop: 30,

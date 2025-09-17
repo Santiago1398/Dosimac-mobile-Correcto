@@ -12,7 +12,7 @@ export default {
     Grabar: '保存',
     EstadoStore: '存儲狀態',
     Nodata: '沒有數據',
-    DosimacRegistration: 'Dosimac 註冊',
+    DosimacRegistration: ' 註冊',
     NewDmMaternity: '新 Dosimac 產房',
     DosimacG: 'Dosimac-G',
     DosimacI: 'Dosimac-I',
@@ -42,4 +42,8 @@ export default {
     NoSePuedeBorrarGranja: '無法刪除新的農場',
     settings: '設定',
     softwareVersion: '軟體版本',
+    numeroCoral: '畜欄編號',
+    numeroMaquina: '機器編號',
+    Enviar: '送出',
+    Salir: '離開',
 };

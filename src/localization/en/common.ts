@@ -2,6 +2,7 @@
 export default {
    username: 'Username',
    password: 'Password',
+   Server: 'Server IP',
    login: 'Login',
    welcome: 'Welcome',
    change_language: 'Change language',
@@ -13,7 +14,7 @@ export default {
    Grabar: 'Record',
    EstadoStore: 'Store status',
    Nodata: 'No data',
-   DosimacRegistration: 'Dosimac registration',
+   DosimacRegistration: 'Registration',
    NewDmMaternity: 'New Dosimac maternity',
    DosimacG: 'Dosimac-G',
    DosimacI: 'Dosimac-I',
@@ -43,6 +44,10 @@ export default {
    NoSePuedeBorrarGranja: 'You cannot delete a new farm',
    settings: 'Settings',
    softwareVersion: 'Software version',
+   numeroCoral: 'Pen number',
+   numeroMaquina: 'Machine number',
+   Enviar: 'Send',
+   Salir: 'Exit',
 
 
 };

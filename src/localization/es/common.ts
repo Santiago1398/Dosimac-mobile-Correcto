@@ -1,11 +1,16 @@
+import { Server } from "http";
+import { config } from "process";
+
 /* eslint-disable prettier/prettier */
 export default {
-   username: 'Usuario',
+   username: 'Username',
    password: 'Clave',
+   Server: 'Server IP',
    login: 'Login',
    welcome: 'Bienvenido',
    change_language: 'Cambia idioma',
    Tabs: 'Inicio',
+
 
    Lista_instalaciones: 'Instalaciones',
    Maintenance: 'Mantenimiento',
@@ -24,7 +29,7 @@ export default {
    DosimacList: 'Equipos DOSIMAC',
    PressToScan: 'Pulse',
    DosimacSetup: 'Configuracion',
-   TestoPresioneAlta: "Presione sobre el boton para buscar dispositivos",
+   TestoPresioneAlta: "Presione sobre el boton para buscar dispositivos DOSIMAC",
    Instalación_seleccionada: "Instalación seleccionada",
    NoInstalacionSeleccionada: "No hay instalación seleccionada",
    BorrarGranja: "Borrar granja",
@@ -37,12 +42,20 @@ export default {
    Provincia: 'Province',
    NombreWifi: 'Wifi SSID',
    PasswordWifi: 'Wifi password',
+
    No_hay_dispositivos: 'No hay dispositivos',
    Aviso: 'Aviso',
-   SearchingDevicesº: 'Buscando equipos...',
+   SearchingDevices: 'Buscando equipos...',
    NoSePuedeBorrarGranja: "No se puede borrar una granja nueva",
    settings: 'Ajustes',
-   softwareVersion: "software Version"
+   softwareVersion: "software Version",
+   configuarIntalacion: "Debe configurar al menos una instalación",
+   numeroCoral: "Número de corral",
+   numeroMaquina: "Número de máquina",
+   Enviar: "Enviar",
+   Salir: "Salir",
+
+
 
 
 };

@@ -12,7 +12,7 @@ export default {
     Grabar: 'Salva',
     EstadoStore: 'Stato store',
     Nodata: 'Nessun dato',
-    DosimacRegistration: 'Registrazione Dosimac',
+    DosimacRegistration: 'Registrazione',
     NewDmMaternity: 'Nuovo Dosimac maternità',
     DosimacG: 'Dosimac-G',
     DosimacI: 'Dosimac-I',
@@ -42,4 +42,8 @@ export default {
     NoSePuedeBorrarGranja: 'Non è possibile eliminare una nuova fattoria',
     settings: 'Impostazioni',
     softwareVersion: 'Versione software',
+    numeroCoral: 'Numero del recinto',
+    numeroMaquina: 'Numero della macchina',
+    Enviar: 'Invia',
+    Salir: 'Esci',
 };

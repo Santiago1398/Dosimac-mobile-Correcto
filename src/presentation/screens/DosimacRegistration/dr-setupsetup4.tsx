@@ -649,9 +649,9 @@ export const DRSetup = ({ navigation, route }) => {
                </Menu>
 
             </View>
-            <TextInput style={{ marginTop: 5 }} keyboardType='number-pad' label="Número de  corral" mode="outlined" placeholder="Marcador corral" value={corral} onChangeText={setCorral} />
+            <TextInput style={{ marginTop: 5 }} keyboardType='number-pad' label={t('common:numeroCoral')} mode="outlined" placeholder={t('common:numeroCoral')} value={corral} onChangeText={setCorral} />
             {globals.dispenserType > 2 &&
-               <TextInput style={{ marginTop: 5 }} keyboardType='number-pad' label="Número de  máquina" mode="outlined" placeholder="Número de máquina" value={deviceNumber} onChangeText={setDeviceNumber} />
+               <TextInput style={{ marginTop: 5 }} keyboardType='number-pad' label={t('common:numeroMaquina')} mode="outlined" placeholder={t('common:numeroMaquina')} value={deviceNumber} onChangeText={setDeviceNumber} />
             }
 
          </View>
@@ -677,7 +677,7 @@ export const DRSetup = ({ navigation, route }) => {
                   // setSendVisible(!sendVisible);
                }}
             >
-               <Text style={styles.texto}>Enviar</Text>
+               <Text style={styles.texto}>{t('common:Enviar')}</Text>
             </Pressable>
             <Pressable
                android_ripple={{ color: 'blue' }}
@@ -688,7 +688,7 @@ export const DRSetup = ({ navigation, route }) => {
                   navigation.navigate('DR-NEWUPDATE', { operacion: route.params.operacion });
                }}
             >
-               <Text style={styles.texto}>Salir</Text>
+               <Text style={styles.texto}>{t('common:Salir')}</Text>
             </Pressable>
 
          </View>

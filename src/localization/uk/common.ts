@@ -12,7 +12,7 @@ export default {
     Grabar: 'Зберегти',
     EstadoStore: 'Стан store',
     Nodata: 'Немає даних',
-    DosimacRegistration: 'Реєстрація Dosimac',
+    DosimacRegistration: 'Реєстрація',
     NewDmMaternity: 'Новий Dosimac (пологи)',
     DosimacG: 'Dosimac-G',
     DosimacI: 'Dosimac-I',
@@ -42,4 +42,8 @@ export default {
     NoSePuedeBorrarGranja: 'Неможливо видалити нову ферму',
     settings: 'Налаштування',
     softwareVersion: 'Версія програмного забезпечення',
+    numeroCoral: 'Номер загону',
+    numeroMaquina: 'Номер машини',
+    Enviar: 'Надіслати',
+    Salir: 'Вийти',
 };

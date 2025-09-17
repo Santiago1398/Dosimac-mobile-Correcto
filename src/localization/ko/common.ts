@@ -12,7 +12,7 @@ export default {
     Grabar: '저장',
     EstadoStore: '스토어 상태',
     Nodata: '데이터 없음',
-    DosimacRegistration: 'Dosimac 등록',
+    DosimacRegistration: ' 등록',
     NewDmMaternity: '새 Dosimac 모성',
     DosimacG: 'Dosimac-G',
     DosimacI: 'Dosimac-I',
@@ -42,4 +42,9 @@ export default {
     NoSePuedeBorrarGranja: '새 농장은 삭제할 수 없습니다',
     settings: '설정',
     softwareVersion: '소프트웨어 버전',
+    numeroCoral: '우리 번호',
+    numeroMaquina: '기계 번호',
+    Enviar: '보내기',
+    Salir: '나가기',
+
 };

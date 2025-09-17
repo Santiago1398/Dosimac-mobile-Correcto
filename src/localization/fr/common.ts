@@ -12,7 +12,7 @@ export default {
     Grabar: 'Enregistrer',
     EstadoStore: 'État store',
     Nodata: 'Pas de données',
-    DosimacRegistration: 'Inscription Dosimac',
+    DosimacRegistration: 'Inscription',
     NewDmMaternity: 'Nouveau Dosimac maternité',
     DosimacG: 'Dosimac-G',
     DosimacI: 'Dosimac-I',
@@ -42,4 +42,8 @@ export default {
     NoSePuedeBorrarGranja: 'Impossible de supprimer une nouvelle ferme',
     settings: 'Paramètres',
     softwareVersion: 'Version du logiciel',
+    numeroCoral: "Numéro d’enclos",
+    numeroMaquina: 'Numéro de machine',
+    Enviar: 'Envoyer',
+    Salir: 'Quitter',
 };

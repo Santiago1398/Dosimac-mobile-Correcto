@@ -124,7 +124,7 @@ export const FarmScreen = ({ navigation, route }) => {
   const deleteFarm = async () => {
     vglobal.coinciden = false;
     if (route.params.isNewFarm) {
-      Alert.alert('No se puede borrar una granja nueva');
+      Alert.alert(t('common:NoSePuedeBorrarGranja'));
     } else {
       await deleteFarmById(route.params.id);
       if (route.params.id === route.params.SetectedValue) {
@@ -147,10 +147,15 @@ export const FarmScreen = ({ navigation, route }) => {
         <Appbar.Action
           icon="delete"
           onPress={() => {
-            Alert.alert('Borrar granja', 'Desea borrar la granja', [
-              { text: 'OK', onPress: () => { deleteFarm(); } },
-              { text: 'Cancelar', onPress: () => { } },
-            ]);
+            Alert.alert(
+              t('BorrarGranja'),
+              t('Deseaborrarlagranja'),
+              [
+                { text: t('Cancelar'), style: 'cancel' },
+                { text: 'OK', style: 'destructive', onPress: () => deleteFarm() },
+              ],
+              { cancelable: true }
+            );
           }}
         />
       </Appbar.Header>
@@ -172,36 +177,26 @@ export const FarmScreen = ({ navigation, route }) => {
           contentContainerStyle={{ flexGrow: 1, paddingBottom: 140 }}
         >
           <View style={{ marginTop: 20, gap: 10, marginHorizontal: 10, paddingHorizontal: 10 }}>
-            <TextInput label="Farm Name" mode="outlined" placeholder="Nombre de la granja" value={name} onChangeText={setName} />
-            <TextInput label="Location" mode="outlined" placeholder="Poblacion" value={location} onChangeText={setLocation} />
-            <TextInput label="Province" mode="outlined" placeholder="Provincia" value={province} onChangeText={setProvince} />
-            <TextInput label="Wifi SSID" mode="outlined" placeholder="Nombre red WIFI" value={ssid} onChangeText={setSsid} />
+            <TextInput label={t("NombreGranja")} mode="outlined" placeholder="Nombre de la granja" value={name} onChangeText={setName} />
+            <TextInput label={t("Localidad")} mode="outlined" placeholder="Poblacion" value={location} onChangeText={setLocation} />
+            <TextInput label={t("Provincia")} mode="outlined" placeholder="Provincia" value={province} onChangeText={setProvince} />
+            <TextInput label={t("NombreWifi")} mode="outlined" placeholder="Nombre red WIFI" value={ssid} onChangeText={setSsid} />
+            <TextInput label={t("PasswordWifi")} mode="outlined" placeholder="Wifi Password" value={wifiPassword} onChangeText={setWifiPassword}
 
-            <TextInput
-              label="Wifi password"
-              mode="outlined"
-              placeholder="Wifi Password"
-              value={wifiPassword}
-              onChangeText={setWifiPassword}
               secureTextEntry={flatTextSecureEntry}
               right={
                 <TextInput.Icon
-                  icon={() => (
-                    <IonIcon
-                      name={flatTextSecureEntry ? 'eye-outline' : 'eye-off-outline'}
-                      size={24}
-                      color="black"
-                    />
-                  )}
+                  icon={() => <IonIcon name={flatTextSecureEntry ? 'eye-outline' : 'eye-off-outline'} size={24} color="black" />}
+
                   onPress={() => setFlatTextSecurityEntry(!flatTextSecureEntry)}
                   forceTextInputFocus={false}
                 />
               }
             />
 
-            <TextInput label="User name" mode="outlined" placeholder="Nombre usuario" value={userName} onChangeText={setUsername} />
+            <TextInput label={t("username")} mode="outlined" placeholder="Nombre usuario" value={userName} onChangeText={setUsername} />
             <TextInput
-              label="User password"
+              label={t("password")}
               mode="outlined"
               placeholder="Password usuario"
               value={password}
@@ -224,7 +219,7 @@ export const FarmScreen = ({ navigation, route }) => {
 
             <TextInput
               keyboardType="number-pad"
-              label="Server IP"
+              label={t("Server")}
               mode="outlined"
               placeholder="IP Servidor"
               value={serverIp}
