@@ -46,5 +46,6 @@ export default {
     numeroMaquina: '기계 번호',
     Enviar: '보내기',
     Salir: '나가기',
+    Informacion: '정보',
 
 };

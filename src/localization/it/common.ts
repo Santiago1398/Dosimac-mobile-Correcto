@@ -46,4 +46,5 @@ export default {
     numeroMaquina: 'Numero della macchina',
     Enviar: 'Invia',
     Salir: 'Esci',
+    Informacion: 'Informazioni',
 };

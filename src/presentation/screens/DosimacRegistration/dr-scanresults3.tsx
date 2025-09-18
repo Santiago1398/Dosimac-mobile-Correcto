@@ -9,6 +9,8 @@ import { PrimaryButton } from '../../components/shared/PrimaryButton';
 // import { useNavigation } from '@react-navigation/native';
 // import { bytesToString } from 'convert-string';
 import { BlePeripheral } from '../../../device/ble/bleLibrary';
+import { Buffer } from 'buffer';
+
 
 export const DRScanResultsScreen = ({ navigation, route }) => {
 
@@ -26,7 +28,120 @@ export const DRScanResultsScreen = ({ navigation, route }) => {
    const showDialog = () => setVisible(true);
 
    const hideDialog = () => setVisible(false);
+   const NEEDLES_ASCII: number[][] = [
+      [68, 79, 83, 73, 77, 65, 67], // "DOSIMAC"
+   ];
+   const ALLOWED_OUIS = ['E8:6B:EA'];
+
    const deviceMark = [17, 68, 79, 83, 73, 77, 65, 67].toString(); //device.advertising son 10 caracteres
+
+   function includesSubsequence(h: number[], n: number[]) {
+      outer: for (let i = 0; i <= h.length - n.length; i++) {
+         for (let j = 0; j < n.length; j++) {
+            if ((h[i + j] & 0xff) !== (n[j] & 0xff)) continue outer;
+         }
+         return true;
+      }
+      return false;
+   }
+   function includesAnyNeedle(bytes: number[], needles: number[][]) {
+      for (const n of needles) if (includesSubsequence(bytes, n)) return true;
+      return false;
+   }
+
+   function extractAdvBytesIOS(adv: any): number[] | null {
+      if (!adv) return null;
+      if (Array.isArray(adv.manufacturerRawData)) return adv.manufacturerRawData;
+
+      if (adv.manufacturerData && typeof adv.manufacturerData === 'object') {
+         const k = Object.keys(adv.manufacturerData)[0];
+         if (k && Array.isArray(adv.manufacturerData[k])) return adv.manufacturerData[k];
+      }
+
+      if (adv.serviceData && typeof adv.serviceData === 'object') {
+         const k = Object.keys(adv.serviceData)[0];
+         const p: any = k ? adv.serviceData[k] : undefined;
+         const bytes = Array.isArray(p) ? p : Array.isArray(p?.bytes) ? p.bytes : undefined;
+         if (Array.isArray(bytes)) return bytes;
+      }
+      return null;
+   }
+
+   function base64ToBytes(b64: string): number[] {
+      try {
+         const bin = Buffer.from(b64, 'base64').toString('binary');
+         const out: number[] = [];
+         for (let i = 0; i < bin.length; i++) out.push(bin.charCodeAt(i) & 0xff);
+         return out;
+      } catch {
+         return [];
+      }
+   }
+
+   function getAdvBytes(d: any): number[] | null {
+      if (Array.isArray((d as any).advBytes) && (d as any).advBytes.length) return (d as any).advBytes;
+
+      const adv: any = d.peripheral?.advertising || d.advertising || {};
+
+      // iOS
+      const iosBytes = extractAdvBytesIOS(adv);
+      if (Array.isArray(iosBytes)) return iosBytes;
+
+      // Android / variantes
+      if (adv?.manufacturerData?.bytes && Array.isArray(adv.manufacturerData.bytes)) {
+         return adv.manufacturerData.bytes;
+      }
+      if (typeof adv?.manufacturerData === 'string') {
+         const arr = base64ToBytes(adv.manufacturerData);
+         if (arr.length) return arr;
+      }
+      if (typeof adv?.manufacturerData?.data === 'string') {
+         const arr = base64ToBytes(adv.manufacturerData.data);
+         if (arr.length) return arr;
+      }
+      if (Array.isArray(adv?.manufacturerRawData)) {
+         return adv.manufacturerRawData;
+      }
+      if (adv?.rawData?.bytes && Array.isArray(adv.rawData.bytes)) {
+         return adv.rawData.bytes;
+      }
+
+      // fallback "17,67,..." como texto
+      if (typeof d.advertising === 'string' && d.advertising.includes(',')) {
+         const arr = d.advertising.split(',').map((n: string) => Number(n));
+         if (arr.every((x: any) => Number.isFinite(x))) return arr;
+      }
+      return null;
+   }
+
+   // ===== 5) Filtros de pertenencia (primero advertising; si no, OUI) =====
+   function macHasAllowedPrefix(id?: string | null) {
+      if (!id) return false;
+      const mac = id.toUpperCase();
+      const parts = mac.split(':');
+      if (parts.length >= 3) {
+         const oui = parts.slice(0, 3).join(':');
+         return ALLOWED_OUIS.includes(oui);
+      }
+      return false;
+   }
+
+   function isOurs(d: BlePeripheral): boolean {
+      const bytes = getAdvBytes(d);
+      if (Array.isArray(bytes) && bytes.length) {
+         return includesAnyNeedle(bytes, NEEDLES_ASCII); // ← SOLO DOSIMAC
+      }
+      return macHasAllowedPrefix(d.id);
+   }
+
+   // ===== 6) Etiqueta corta desde MAC (últimos 2 octetos, ej. "CBCA") =====
+   function getDeviceLabel(d: BlePeripheral): string {
+      const id = d.id || '';
+      const mac = id.includes(':')
+         ? id.split(':').slice(-2).join('')
+         : id.replace(/[^0-9A-Fa-f]/g, '').slice(-4);
+      return mac ? mac.toUpperCase() : 'UNKN';
+   }
 
    useEffect(() => {
       console.log("inicio ------");
@@ -42,37 +157,30 @@ export const DRScanResultsScreen = ({ navigation, route }) => {
 
    //Maquina de estados para el escanedo inicial
    useEffect(() => {
-      const incrementCount = () => {
-         setStartState(startState + 1);
-      };
-
       const timer = setTimeout(() => {
-         if (startState < 2)
-            incrementCount()
-         else {
-            console.log("Inicio finalizado");
+         if (startState < 2) {
+            setStartState(startState + 1);
+         } else {
+            console.log('Inicio finalizado');
             setScanning(false);
-            // console.log(ble.devices);
-            let cdevices = 0;
-            console.log(ble.devices.forEach(device => {
-               cdevices++;
-               console.log("-----: " + cdevices.toString());
-               console.log(device.id);
-               console.log(device.name);
-               console.log(device);
-            }));
-            console.log(ble.devices.length);
 
-            ble.devices.forEach(device => { if (device.advertising === deviceMark) setHasDevices(true) });
+            // ⬇⬇⬇ Pega aquí el bloque ⬇⬇⬇
+            const found = ble.devices.some(isOurs);
+            setHasDevices(found);
 
-
-
-
+            // (opcional) debug
+            ble.devices.forEach((device, idx) => {
+               const adv = getAdvBytes(device) ?? [];
+               console.log(`-----: ${idx + 1}`);
+               console.log('ID:', device.id, 'NAME:', device.name ?? 'null');
+               console.log('ADV BYTES:', adv);
+            });
+            // ⬆⬆⬆ Fin del bloque ⬆⬆⬆
          }
       }, startBleStateMachine());
-      return () => clearTimeout(timer);
 
-   }, [startState])
+      return () => clearTimeout(timer);
+   }, [startState]);
 
 
 
@@ -170,41 +278,21 @@ export const DRScanResultsScreen = ({ navigation, route }) => {
    }
 
    const renderDevice = (device: BlePeripheral) => {
-      const milabel: string = device.id.slice(-5)
-      const label: string = milabel.replace(":", "");
-      // console.log("milabel: ",milabel);
-      // console.log("label: ",label);
-      console.log("Advertising rendering:", device.advertising);
-      // const deviceMark=[17,68,79,83,73,77,65,67].toString(); //device.advertising son 10 caracteres
-      if (device.advertising === deviceMark)
+      if (!isOurs(device)) return null;         // ← SOLO DOSIMAC
+      const label = getDeviceLabel(device);     // ← "CBCA" desde MAC
+      return (
+         <View key={device.id} style={{ marginTop: 15 }}>
+            <MainButton
+               onPress={() =>
+                  navigation.navigate('DR-SETUP', { id: device.id, operacion: route.params.operacion })
+               }
+               label={label}
+               size={3}
+            />
+         </View>
+      );
+   };
 
-         // if (device.name === 'DOSIMAC') 
-
-         // <TabDr.Screen name="DRSETUP" component={DRSetup} />
-         return (
-
-            <View key={device.id} style={{ marginTop: 15 }}>
-               {/* <Text >{device.id}   {device.name}</Text> */}
-               <MainButton onPress={() => navigation.navigate('DR-SETUP', { id: device.id, operacion: route.params.operacion })}
-                  label={label}
-                  size={3}
-
-               />
-               {/* <MainButton onPress={() => navigation.navigate('DR-SETUP', { 
-                  screen:'DRSETUP',
-                  params:{
-                     id: device.id 
-                  }
-                  })}
-                  // label={milabel.trimEnd().slice(-7)}
-                  label={label}
-
-                  size={3}
-               /> */}
-            </View>
-
-         )
-   }
 
    return (
       <View style={{ flex: 1 }}>

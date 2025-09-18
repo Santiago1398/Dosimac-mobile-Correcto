@@ -46,4 +46,5 @@ export default {
     numeroMaquina: '機器編號',
     Enviar: '送出',
     Salir: '離開',
+    Informacion: '資訊',
 };

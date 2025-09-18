@@ -46,4 +46,5 @@ export default {
     numeroMaquina: 'Номер машини',
     Enviar: 'Надіслати',
     Salir: 'Вийти',
+    Informacion: 'Інформація',
 };

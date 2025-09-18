@@ -54,6 +54,7 @@ export default {
    numeroMaquina: "Número de máquina",
    Enviar: "Enviar",
    Salir: "Salir",
+   Informacion: "Información",
 
 
 

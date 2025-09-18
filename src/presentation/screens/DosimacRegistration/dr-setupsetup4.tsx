@@ -432,7 +432,7 @@ export const DRSetup = ({ navigation, route }) => {
                      }}
                   />
                )}>
-               <Text style={{ fontWeight: 'bold' }}> Informacion</Text>
+               <Text style={{ fontWeight: 'bold' }}> {t('common:Informacion')}</Text>
                {'\n'}
                {'\n'}
                <Text> {sfarm.name}</Text>
