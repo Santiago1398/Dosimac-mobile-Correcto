@@ -4,6 +4,12 @@ import { View, Pressable, Platform, useWindowDimensions, StyleSheet } from 'reac
 import { Appbar, Card, Text } from 'react-native-paper';
 import { useTranslation } from 'react-i18next';
 
+// Librería BLE unificada
+import * as ble from '../../../device/ble/bleLibrary';
+
+// 👇 Antes usábamos esto para leer manufacturerData, ahora ya no lo necesitamos
+// import { startWatchAdvertisements } from '../../../device/ble/bleLibrary.web';
+
 export const DRstartscanningScreen = ({ navigation, route }: any) => {
    const { t } = useTranslation();
    const { width } = useWindowDimensions();
@@ -12,17 +18,67 @@ export const DRstartscanningScreen = ({ navigation, route }: any) => {
    // helpers
    const clamp = (n: number, min: number, max: number) => Math.min(Math.max(n, min), max);
 
-   // Tamaño del botón:
-   // - móvil: más pequeño (140–200)
-   // - web: algo grande pero controlado (220–340) y centrado
-   const btnSize = isWeb
-      ? clamp(width * 0.25, 220, 340)
-      : clamp(width * 0.45, 140, 200);
-
+   // Tamaño del botón
+   const btnSize = isWeb ? clamp(width * 0.25, 220, 340) : clamp(width * 0.45, 140, 200);
    const fontSize = Math.round(btnSize * 0.16);
-
-   // Ancho de la tarjeta en web, centrada; en móvil usa 90% del ancho
    const cardWidth = isWeb ? clamp(width * 0.6, 360, 640) : '90%';
+
+   const [pressed, setPressed] = React.useState(false);
+
+   const operacion = route?.params?.operacion;
+
+   const handlePress = async () => {
+      if (pressed) return;
+      setPressed(true);
+
+      if (Platform.OS === 'web') {
+         try {
+            ble.BleStart?.();
+            ble.bleAddListener?.();
+
+            console.log('[DRstart][web] startScanning…');
+            const dev = await ble.startScanning?.("dosimac");
+
+            if (!dev) {
+               console.log('[DRstart][web] Usuario canceló el selector BLE');
+               setPressed(false);
+               return;
+            }
+
+            console.log('[DRstart][web] seleccionado', dev.id, dev.name ?? null);
+            console.log('[DRstart][web] navegando a DR-SETUP (ya debería estar conectado)');
+
+            // Ya NO llamamos a bleConnection aquí
+            navigation.navigate('DR-SETUP', {
+               id: dev.id,
+               operacion,
+            });
+
+         } catch (e: any) {
+            if (e?.name === 'NotFoundError') {
+               console.log('[DRstart][web] Usuario cerró el chooser sin elegir nada');
+            } else {
+               console.error('[DRstart][web] Web scan error:', e);
+            }
+         } finally {
+            setPressed(false);
+         }
+      } else {
+         // 🔹 NATIVO (Android / iOS): flujo antiguo con DR-SCANRESULTS
+         try {
+            ble.BleStart?.();
+            ble.bleAddListener?.();
+            ble.startScanning?.();
+            navigation.navigate('DR-SCANRESULTS', {
+               operacion,
+               webScan: false,
+               lastId: null,
+            });
+         } finally {
+            setPressed(false);
+         }
+      }
+   };
 
    return (
       <View style={styles.page}>
@@ -43,19 +99,20 @@ export const DRstartscanningScreen = ({ navigation, route }: any) => {
 
             {/* Botón redondo */}
             <Pressable
-               onPress={() =>
-                  navigation.navigate('DR-SCANRESULTS', { operacion: route?.params?.operacion })
-               }
+               onPress={handlePress}
                style={[
                   styles.circle,
                   {
                      width: btnSize,
                      height: btnSize,
                      borderRadius: btnSize / 2,
+                     opacity: pressed ? 0.7 : 1,
                   },
                ]}
             >
-               <Text style={[styles.circleText, { fontSize }]}>{t('common:PressToScan')}</Text>
+               <Text style={[styles.circleText, { fontSize }]}>
+                  {t('common:PressToScan')}
+               </Text>
             </Pressable>
          </View>
       </View>
@@ -63,19 +120,16 @@ export const DRstartscanningScreen = ({ navigation, route }: any) => {
 };
 
 const styles = StyleSheet.create({
-   page: {
-      flex: 1,
-      backgroundColor: '#F3F5F8',
-   },
+   page: { flex: 1, backgroundColor: '#F3F5F8' },
    body: {
       flex: 1,
-      alignItems: 'center',      // centra hijos horizontalmente (web y móvil)
+      alignItems: 'center',
       paddingHorizontal: 16,
       paddingTop: 24,
       gap: 28,
    },
    card: {
-      alignSelf: 'center',        // asegura centrado en web
+      alignSelf: 'center',
       borderRadius: 14,
       backgroundColor: '#F2ECFB',
       borderWidth: 1,
@@ -86,10 +140,7 @@ const styles = StyleSheet.create({
       shadowOffset: { width: 0, height: 6 },
       elevation: 3,
    },
-   cardText: {
-      textAlign: 'center',
-      fontWeight: '600',
-   },
+   cardText: { textAlign: 'center', fontWeight: '600' },
    circle: {
       backgroundColor: '#0F746F',
       alignItems: 'center',
@@ -100,8 +151,5 @@ const styles = StyleSheet.create({
       shadowOffset: { width: 0, height: 10 },
       elevation: 6,
    },
-   circleText: {
-      color: '#FFF7D6',
-      fontWeight: '800',
-   },
+   circleText: { color: '#FFF7D6', fontWeight: '800' },
 });

@@ -1,46 +1,65 @@
-import React, { useEffect, useState } from 'react'
-import { Pressable, View } from 'react-native'
-import { ActivityIndicator, Appbar, Text, Button, Card, Portal, Dialog } from 'react-native-paper';
-import { MainButton } from '../../components/shared/MainButton '
-import { useTranslation } from 'react-i18next'
-import { globalStyles } from '../../theme/theme';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Platform } from 'react-native';
+import { ActivityIndicator, Appbar, Text, Button, Portal, Dialog } from 'react-native-paper';
+import { useTranslation } from 'react-i18next';
 import * as ble from '../../../device/ble/bleLibrary';
-import { PrimaryButton } from '../../components/shared/PrimaryButton';
-// import { useNavigation } from '@react-navigation/native';
-// import { bytesToString } from 'convert-string';
+import { MainButton } from '../../components/shared/MainButton ';
 import { BlePeripheral } from '../../../device/ble/bleLibrary';
 import { Buffer } from 'buffer';
+import { startScanning } from '../../../device/ble/bleLibrary.web';
+import { PeripheralInfoUnified } from '../../../sharedTypes/types';
 
-export const DRScanResultsScreen = ({ navigation, route }) => {
+export const DRScanResultsScreen = ({ navigation, route }: any) => {
    const { t } = useTranslation();
 
-   // Helpers ASCII
+   // Helpers ASCII (para nativo)
    const ASCII = (s: string) => s.split('').map(c => c.charCodeAt(0));
-   const bytesToAscii = (bytes: number[]) =>
-      String.fromCharCode(...bytes.map(b => b & 0xff));
+   const bytesToAscii = (bytes: number[]) => String.fromCharCode(...bytes.map(b => b & 0xff));
 
-   const [scanning, setScanning] = useState(true)
-   const [isVisible, setIsVisible] = useState(true);
+   const [scanning, setScanning] = useState(true);
    const [startState, setStartState] = useState(0);
-   const [contadorIntervalo, setContadorIntervalo] = useState(0);
    const [hasDevices, setHasDevices] = useState(false);
+   const knownAff2IdsRef = React.useRef(new Set<string>());
+   const [visible, setVisible] = useState(false);
+   const [checked, setChecked] = useState(false);
+   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+   const [pairing, setPairing] = useState(false);
 
-   const [visible, setVisible] = React.useState(true);
-   const showDialog = () => setVisible(true);
-   const hideDialog = () => setVisible(false);
+   const hideDialog = () => {
+      setVisible(false);
+      navigation.navigate('DR-NEWUPDATE');
+   };
 
-   // Prefijos de MAC permitidos como respaldo
+   // refs que no disparan rerenders
+   const lastSelectedIdRef = useRef<string | null>(null);
+
+   // Cuando abras el chooser (en otra pantalla), puedes usar esto si lo necesitas:
+   const handleChooseWeb = async () => {
+      const dev = await startScanning();     // <- función web
+      if (dev) lastSelectedIdRef.current = dev.id;
+   };
+
+   // Prefijos OUI permitidos como respaldo (solo nativo)
    const ALLOWED_OUIS = ['E8:6B:EA'];
 
-   // Agujas según la operación (1 = I, 3 = G). Sin genérico salvo fallback.
+   // labels[id] = serial devuelto por bleConnection (WEB)
+   const [labels, setLabels] = useState<Record<string, string>>({});
+
+   function shortLabelFromSerial(serial: string | null | undefined): string {
+      if (typeof serial !== 'string') return 'UNKN';
+      const clean = serial.replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
+      return (clean.slice(-4) || 'UNKN');
+   }
+
+   // Agujas según la operación (1 = I, 3 = G). Fallback genérico. (nativo)
    function getNeedles(): string[] {
       const op = Number(route?.params?.operacion) || 0;
       if (op === 1) return ['DOSIMAC-I'];
       if (op === 3) return ['DOSIMAC-G'];
-      return ['DOSIMAC']; // fallback si no llega operacion
+      return ['DOSIMAC'];
    }
 
-   // ===== Extractores de advertising =====
+   // ===== Extractores de advertising (nativo) =====
    function extractAdvBytesIOS(adv: any): number[] | null {
       if (!adv) return null;
       if (Array.isArray(adv.manufacturerRawData)) return adv.manufacturerRawData;
@@ -106,7 +125,7 @@ export const DRScanResultsScreen = ({ navigation, route }) => {
       return null;
    }
 
-   // ===== Filtro secundario por OUI =====
+   // ===== Filtro secundario por OUI (nativo) =====
    function macHasAllowedPrefix(id?: string | null) {
       if (!id) return false;
       const mac = id.toUpperCase();
@@ -118,7 +137,7 @@ export const DRScanResultsScreen = ({ navigation, route }) => {
       return false;
    }
 
-   // ===== Dispositivo nuestro según operacion =====
+   // ===== Dispositivo nuestro según operacion (NATIVO) =====
    function isOurs(d: BlePeripheral): boolean {
       const bytes = getAdvBytes(d);
       if (Array.isArray(bytes) && bytes.length) {
@@ -138,28 +157,25 @@ export const DRScanResultsScreen = ({ navigation, route }) => {
       return mac ? mac.toUpperCase() : 'UNKN';
    }
 
-   useEffect(() => {
-      console.log("inicio ------");
-      ble.BleStart();
-      ble.bleAddListener();
-      return () => {
-         ble.bleRemoveListener();
-      }
-   }, []);
+   // ===== En web: nuestro = tiene serial en labels[id] (viene de manufacturerData) =====
+   const isOursWeb = (d: { id: string }) => {
+      return !!labels[d.id];
+   };
 
-   // Máquina de estados del escaneo inicial
+   // ========= LÓGICA NATIVA =========
+   // Máquina de estados solo en nativo (escaneo clásico)
    useEffect(() => {
+      if (Platform.OS === 'web') return; // no hagas nada en web
+
       const timer = setTimeout(() => {
          if (startState < 2) {
             setStartState(startState + 1);
          } else {
-            console.log('Inicio finalizado');
+            // fin
             setScanning(false);
+            setHasDevices(ble.devices.some(isOurs));
 
-            const found = ble.devices.some(isOurs);
-            setHasDevices(found);
-
-            // (opcional) debug
+            // debug opcional
             ble.devices.forEach((device, idx) => {
                const adv = getAdvBytes(device) ?? [];
                console.log(`-----: ${idx + 1}`);
@@ -170,70 +186,205 @@ export const DRScanResultsScreen = ({ navigation, route }) => {
       }, startBleStateMachine());
 
       return () => clearTimeout(timer);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
    }, [startState]);
 
    const startBleStateMachine = (): number => {
-      let tiempo: number = 0;
-
+      if (Platform.OS === 'web') return 0; // seguridad extra
+      let tiempo = 0;
       switch (startState) {
          case 0:
             tiempo = 500;
             break;
          case 1:
-            ble.startScanning();
+            ble.startScanning?.();
             tiempo = 3000;
             break;
          case 2:
-            ble.stopScanning();
+            ble.stopScanning?.();
             tiempo = 100;
             break;
          default:
             break;
       }
-      console.log("Tiempo: " + tiempo);
       return tiempo;
-   }
+   };
 
-   const RenderIsScanning = () => {
-      return (
-         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator size="large" />
-            <View>
-               <Text style={{ fontFamily: 'Roboto-Ligth', fontSize: 20 }}>{t('common:SearchingDevices')}</Text>
-            </View>
+   // ========= LÓGICA WEB =========
+   useEffect(() => {
+      if (Platform.OS !== 'web') return;
+
+      let cancelled = false;
+      const GRACE_MS = 900; // tiempo para mostrar diálogo si no hay ninguno
+
+      const run = async () => {
+         console.log('[RESULTS][web] start…');
+         setScanning(true);
+         setStatusMsg('Emparejando…');
+
+         // Recuperar si venimos con lastId y el array quedó vacío
+         const lastId = route?.params?.lastId as (string | null | undefined);
+         const needsRecover = (!ble.devices || ble.devices.length === 0) && lastId;
+
+         if (needsRecover) {
+            try {
+               const getDevices = (navigator.bluetooth as any)?.getDevices;
+               if (getDevices) {
+                  const granted: BluetoothDevice[] = await getDevices.call(navigator.bluetooth);
+                  const found = granted?.find(d => d.id === lastId);
+                  if (found && !ble.devices.some(x => x.id === found.id)) {
+                     ble.devices.push({ id: found.id, name: found.name ?? null, peripheral: found });
+                     console.log('[RESULTS][web] recovered device from getDevices:', found.id, found.name);
+                  } else {
+                     console.warn('[RESULTS][web] lastId no recuperado desde getDevices().');
+                  }
+               } else {
+                  console.warn('[RESULTS][web] navigator.bluetooth.getDevices() no disponible.');
+               }
+            } catch (e) {
+               console.warn('[RESULTS][web] getDevices() failed:', e);
+            }
+         }
+
+         console.log('[RESULTS][web] devices actuales:', ble.devices);
+
+         // Mapa local de seriales (manufacturerData)
+         const localLabels: Record<string, string> = {};
+
+         // Intenta conectar/leer servicios para cada device
+         for (const d of ble.devices) {
+            try {
+               const info = await ble.bleConnection(d.id) as PeripheralInfoUnified;
+               // info.serial viene de manufacturerData ASCII (DOSIMAC-[IG]_XXXX)
+               if (info.serial) {
+                  localLabels[d.id] = info.serial;
+                  console.log('[RESULTS][web] serial desde manufacturerData para', d.id, ':', info.serial);
+               } else {
+                  console.log('[RESULTS][web] SIN serial manufacturerData para', d.id);
+               }
+            } catch (e) {
+               console.warn('[RESULTS][web] connect/read failed:', e);
+            } finally {
+               await new Promise(r => setTimeout(r, 150));
+               try { await ble.bleDisconnection(d.id); } catch { }
+            }
+         }
+
+         setStatusMsg(null);
+         if (cancelled) return;
+
+         // Actualizamos labels de golpe
+         setLabels(localLabels);
+
+         const anyOurs = Object.keys(localLabels).length > 0;
+         console.log('[RESULTS][web] anyOurs (solo manufacturerData)?', anyOurs);
+
+         setHasDevices(anyOurs);
+         setScanning(false);
+         setChecked(true);
+
+         if (!anyOurs) {
+            setTimeout(() => { if (!cancelled) setVisible(true); }, GRACE_MS);
+         }
+      };
+
+      run();
+      return () => { cancelled = true; };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [route?.params?.lastId]);
+
+   // ========= RENDER =========
+
+   const RenderIsScanning = () => (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+         <ActivityIndicator size="large" />
+         <View>
+            <Text style={{ fontFamily: 'Roboto-Ligth', fontSize: 20 }}>
+               {t('common:SearchingDevices')}
+            </Text>
          </View>
-      )
-   }
+      </View>
+   );
 
-   const dohideDialog = () => {
-      setVisible(false);
-      navigation.navigate('DR-NEWUPDATE')
-   }
+   const RenderDevicesNotFound = () => (
+      <View style={{ alignItems: 'center', marginVertical: 60 }}>
+         <Portal>
+            <Dialog visible={visible} onDismiss={hideDialog}>
+               <Dialog.Icon icon="warning" color="red" size={60} />
+               <Dialog.Title style={{ color: 'red' }}>{t('common:Aviso')}</Dialog.Title>
+               <Dialog.Content>
+                  <Text variant="bodyLarge">{t('common:No_hay_dispositivos')}</Text>
+               </Dialog.Content>
+               <Dialog.Actions>
+                  <Button onPress={hideDialog}>{t('common:Aceptar')}</Button>
+               </Dialog.Actions>
+            </Dialog>
+         </Portal>
+      </View>
+   );
 
-   const RenderDevicesNotFound = () => {
-      return (
-         <View style={{ alignItems: 'center', marginVertical: 60 }}>
-            <View>
-               <Portal>
-                  <Dialog visible={visible} onDismiss={dohideDialog}>
-                     <Dialog.Icon icon="warning" color="red" size={60} />
-                     <Dialog.Title style={{ color: 'red' }}>{t('common:Aviso')}</Dialog.Title>
-                     <Dialog.Content>
-                        <Text variant="bodyLarge" >{t('common:No_hay_dispositivos')}</Text>
-                     </Dialog.Content>
-                     <Dialog.Actions>
-                        <Button onPress={dohideDialog}>{t('common:Aceptar')}</Button>
-                     </Dialog.Actions>
-                  </Dialog>
-               </Portal>
-            </View>
+   const FullScreenOverlay: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+      <View style={{
+         position: 'absolute',
+         top: 0, bottom: 0, left: 0, right: 0,
+         backgroundColor: 'rgba(0,0,0,0.25)',
+         alignItems: 'center',
+         justifyContent: 'center',
+         zIndex: 50,
+         padding: 18
+      }}>
+         <View style={{
+            backgroundColor: '#fff',
+            padding: 18,
+            borderRadius: 12,
+            minWidth: 240,
+            alignItems: 'center'
+         }}>
+            {children}
          </View>
-      )
-   }
+      </View>
+   );
 
    const renderDevice = (device: BlePeripheral) => {
-      if (!isOurs(device)) return null;         // ← filtra por I o G según operacion
-      const label = getDeviceLabel(device);     // ← "CBCA" desde MAC
+      let ours: boolean;
+      let label: string;
+
+      if (Platform.OS === 'web') {
+         // WEB: solo consideramos “nuestros” a los que tienen serial (manufacturerData)
+         const serial = labels[device.id];
+         ours = !!serial;
+
+         if (!ours) {
+            console.log('[RESULTS][web] renderDevice skip (sin serial manufacturerData)', {
+               id: device.id,
+               name: device.name,
+            });
+            return null;
+         }
+
+         const tail4 = shortLabelFromSerial(serial);
+         label = tail4; // BECA / 4286 / etc
+         console.log('[RESULTS][web] renderDevice', {
+            id: device.id,
+            name: device.name,
+            ours,
+            serial,
+            label,
+         });
+      } else {
+         // NATIVO: usar heurística antigua (advertising + OUI)
+         ours = isOurs(device);
+         if (!ours) return null;
+
+         label = getDeviceLabel(device);
+         console.log('[RESULTS][native] renderDevice', {
+            id: device.id,
+            name: device.name,
+            ours,
+            label,
+         });
+      }
+
       return (
          <View key={device.id} style={{ marginTop: 15 }}>
             <MainButton
@@ -254,19 +405,31 @@ export const DRScanResultsScreen = ({ navigation, route }) => {
             <Appbar.Content title={t('common:DosimacList')} />
          </Appbar.Header>
 
-         {scanning && <RenderIsScanning />}
+         {scanning ? (
+            <RenderIsScanning />
+         ) : hasDevices ? (
+            <View style={{ marginTop: 60, marginHorizontal: 40 }}>
+               {ble.devices.map(device => renderDevice(device))}
+            </View>
+         ) : checked ? (
+            <RenderDevicesNotFound />
+         ) : null}
 
-         {!scanning && (
-            hasDevices ? (
-               <View style={{ marginTop: 60, marginHorizontal: 40 }}>
-                  {ble.devices.map(device => renderDevice(device))}
-               </View>
-            ) : (
-               <View>
-                  <RenderDevicesNotFound />
-               </View>
-            )
+         {pairing && (
+            <FullScreenOverlay>
+               <ActivityIndicator size="large" />
+               <Text style={{ marginTop: 12 }}>
+                  {t('common:Pairing') || 'Emparejando…'}
+               </Text>
+            </FullScreenOverlay>
+         )}
+
+         {!!statusMsg && (
+            <FullScreenOverlay>
+               <ActivityIndicator size="large" />
+               <Text style={{ marginTop: 12, fontWeight: '600' }}>{statusMsg}</Text>
+            </FullScreenOverlay>
          )}
       </View>
-   )
-}
+   );
+};

@@ -11,6 +11,7 @@ import { MasterState, dosimacInfo, dosimacSetup, pcomActiveRequestState, pcomAct
 // import { ScrollView } from 'react-native-gesture-handler';
 import { DosimacInfo } from '../../../sharedTypes/dosimacSetup';
 import { globals } from '../../../sharedTypes/globlaVars';
+import { isDeviceConnected } from '../../../device/ble/bleLibrary.web';
 
 const errorList = [
    { id: 0, msg: "Sin accion" },
@@ -187,62 +188,109 @@ export const DRSetup = ({ navigation, route }) => {
    //    return tiempo;
 
    // }
-
-
    useEffect(() => {
+      //  NUEVO: Flag para evitar ejecuciones múltiples
+      let mounted = true;
+      let connectionAttempted = false;
 
-      // if (interfaceManState.msActualJob===0) {
-      //    interfaceManState.activeRequestState();
-      // }
+      const run = async () => {
+         // Evitar múltiples ejecuciones
+         if (connectionAttempted) {
+            console.log('[DRSetup][web]  Conexión ya intentada, saltando');
+            return;
+         }
+         connectionAttempted = true;
 
-      if (stmJob === 0) {
-         pcomSetDeviceId(route.params.id);
-         pcomActiveRequestState();
-      }
+         console.log('[DRSetup][web] SIEMPRE intentando conectar:', route.params.id);
 
+         try {
+            await bleConnection(route.params.id);
 
-   }, []);
+            if (!mounted) return; // Componente desmontado durante la conexión
+
+            console.log('[DRSetup][web]  Conexión establecida');
+            console.log('****  CONEXION CON LA LIBRERIA ****');
+            console.log(dosimacInfo.current);
+         } catch (e) {
+            if (!mounted) return; // Componente desmontado durante el error
+
+            console.error('[DRSetup][web]  Error conectando:', e);
+
+            // No volver atrás si ya está conectado
+            if (isDeviceConnected(route.params.id)) {
+               console.log('[DRSetup][web]  Error pero device está conectado, continuando');
+               return;
+            }
+
+            alert('Error de conexión. Por favor, vuelve a escanear.');
+            navigation.goBack();
+         }
+      };
+
+      run();
+
+      // Cleanup al desmontar
+      return () => {
+         mounted = false;
+         pcomStopStateMachine();
+         if (route.params.id) {
+            console.log('[DRSetup][web] 🔌 Desconectando BLE:', route.params.id);
+            bleDisconnection(route.params.id);
+         }
+      };
+   }, []); //  CRÍTICO: Array vacío, solo ejecutar AL MONTAR
 
    //Cada 0.2 segundos vemos desde el componente como va las maquinas de estado
    useEffect(() => {
-      const incrementCount = () => {
-         setStartState(startState + 1);
-      };
-
       const timer = setTimeout(() => {
-         incrementCount()
-         masterState = pcomCheckStatus();
-         SetHasUnControError(masterState.unControlError);
-         setDInfoComState(masterState.dInfoComState);
-         setDInfomanState(masterState.dInfomanState); //
-         //En la variable configState, indicamos que estamos iniciando una conexion
-         switch (configState) {
-            case 0:
-               if (masterState.dInfoComState === 1)
-                  setConfigState(1);
-               break;
-            case 1:
-               if (masterState.dInfoComState === 0 || masterState.dInfoComState === 2)
-                  setConfigState(2);
+         // contador del bucle
+         setStartState((prev) => prev + 1);
 
-               break;
-            case 2:
-               break;
+         const m = pcomCheckStatus();
+         SetHasUnControError(m.unControlError);
+         setDInfoComState(m.dInfoComState);
+         setDInfomanState(m.dInfomanState);
 
+         //  Lógica de estados más robusta
+         setConfigState((prev) => {
+            console.log(
+               "[UI] transicion configState",
+               "prev=", prev,
+               "dInfoComState=", m.dInfoComState,
+               "dInfomanState=", m.dInfomanState
+            );
+            switch (prev) {
+               case 0:
+                  // Si ya hemos empezado (1) o incluso ya está en 2, salimos de "InicioConfiguracion"
+                  if (m.dInfoComState === 1 || m.dInfoComState === 2) {
+                     return 1; // "ConfiguracionWifi"
+                  }
+                  return prev;
+
+               case 1:
+                  // Terminamos: 0 = error, 2 = OK
+                  if (m.dInfoComState === 0 || m.dInfoComState === 2) {
+                     return 2; // "ConfiguracionRealizada" o "ErrorConfiguracion"
+                  }
+                  return prev;
+
+               case 2:
+               default:
+                  return prev;
+            }
+         });
+
+         if (dosimacInfo.corral > 0) {
+            setIsConfigured(true);
          }
 
-
-         if (dosimacInfo.corral > 0)
-            setIsConfigured(true);
-         console.log("****  CONEXION CON LA LIBRERIA ****")
-         console.log(masterState)
-
-
-
+         console.log("****  CONEXION CON LA LIBRERIA ****");
+         console.log(m);
       }, 1000);
-      return () => clearTimeout(timer);
 
-   }, [startState])
+      return () => clearTimeout(timer);
+   }, [startState]);
+
 
 
 
@@ -452,7 +500,7 @@ export const DRSetup = ({ navigation, route }) => {
       setDInfoComState(-1);
       setDInfomanState(0);
 
-      pcomActiveSetupState();
+      pcomActiveSetupState(route.params.id);
    };
 
 
@@ -615,11 +663,25 @@ export const DRSetup = ({ navigation, route }) => {
                                        : t("ConfiguracionRealizada")}
                            </Text>
                            {configState === 2 && dInfoComState === 2 ? (
-                              <Pressable className='flex-row mt-8 w-auto h-12 rounded-lg bg-green-700 items-center justify-center'
-                                 onPress={() => { dohideDialogSendConfiguration(1); pcomStopStateMachine(); navigation.navigate('DR-NEWUPDATE', { operacion: route.params.operacion }) }}>
+                              <Pressable
+                                 className='flex-row mt-8 w-auto h-12 rounded-lg bg-green-700 items-center justify-center'
+                                 onPress={() => {
+                                    console.log('[DRSetup] ✅ Configuración exitosa, limpiando...');
 
-                                 <Text className='text-center text-gray-100 text-lg px-14 font-semibold'>{t("Aceptar")}</Text>
+                                    dohideDialogSendConfiguration(1);
+                                    pcomStopStateMachine();
 
+                                    // 🔥 NUEVO: Desconectar BLE al terminar con éxito
+                                    if (route.params.id) {
+                                       console.log('[DRSetup] 🔌 Desconectando BLE tras éxito:', route.params.id);
+                                       bleDisconnection(route.params.id);
+                                    }
+
+                                    navigation.navigate('DR-NEWUPDATE', { operacion: route.params.operacion });
+                                 }}>
+                                 <Text className='text-center text-gray-100 text-lg px-14 font-semibold'>
+                                    {t("Aceptar")}
+                                 </Text>
                               </Pressable>
                            ) : ((configState === 2 && dInfoComState === 0 && <Text className='text-lg text-slate-700 mt-2'>{errorList[dInfomanState].msg}</Text>))
                            }
@@ -772,8 +834,16 @@ export const DRSetup = ({ navigation, route }) => {
                android_ripple={{ color: 'blue' }}
                style={{ ...styles.boton, backgroundColor: 'darkred' }}
                onPress={() => {
-                  // submitData();
+                  console.log('[DRSetup] 🚪 Saliendo manualmente');
+
                   pcomStopStateMachine();
+
+                  // 🔥 NUEVO: Desconectar BLE al salir manualmente
+                  if (route.params.id) {
+                     console.log('[DRSetup] 🔌 Desconectando BLE al salir:', route.params.id);
+                     bleDisconnection(route.params.id);
+                  }
+
                   navigation.navigate('DR-NEWUPDATE', { operacion: route.params.operacion });
                }}
             >

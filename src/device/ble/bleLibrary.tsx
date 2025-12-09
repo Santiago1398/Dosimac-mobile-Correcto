@@ -3,6 +3,7 @@ import BleManager from 'react-native-ble-manager';
 import { NativeEventEmitter, NativeModules } from 'react-native';
 import { Parser } from '../../libraries/comunications/cti-parser';
 import { pcomProccessResponse, pcomResponseClassifier } from '../../libraries/comunications/dosimacBleMessages';
+import { PeripheralInfoUnified } from '../../sharedTypes/types';
 
 
 const BleManagerModule = NativeModules.BleManager;
@@ -17,6 +18,14 @@ export interface BlePeripheral {
   advertising?: string | null;
   peripheral: any;
 }
+
+export type PeripheralInfo = {
+  id: string;
+  name: string | null;
+  services: string[];
+  serial?: string | null; // <-- añade este opcional
+};
+
 
 export let devices: BlePeripheral[];
 export let conectedDevices: BlePeripheral[];
@@ -46,13 +55,19 @@ export const bleRemoveListener = () => {
   bleManagerEmitter.removeAllListeners('BleManagerDiscoverPeripheral');
 }
 
-export const startScanning = () => {
+// añade un tipo compartido arriba (opcional)
+export type ScanMode = "any" | "dosimac";
+
+// Acepta un parámetro opcional aunque no lo uses en nativo
+export const startScanning = (mode?: ScanMode) => {
   clearDevices();
-  console.log('Start Scanning...');
+  console.log('Start Scanning...', mode); // ignorado en nativo
   BleManager.scan([], 3, false, { matchMode: 2 }).then(() => {
     console.log('Scanning...');
   });
+  return Promise.resolve(undefined); // para compatibilidad con web
 };
+
 
 const handleDiscoverPeripheral = (peripheral: BlePeripheral) => {
   console.log('Got ble peripheral', peripheral);
@@ -87,19 +102,41 @@ const clearDevices = () => {
 
 
 
-export const bleConnection = async (id: string) => {
+
+export const bleConnection = async (id: string): Promise<PeripheralInfoUnified> => {
   if (!id) throw new Error('BLEConnection: No device selected');
 
   await BleManager.connect(id);
   console.log('Connected to ' + id);
-  selectedDevice = id;
 
-  // MUY IMPORTANTE antes de notificar
-  const peripheralInfo = await BleManager.retrieveServices(id);
-  console.log('Services/Characteristics', peripheralInfo);
+  // MUY IMPORTANTE: algunos stacks requieren un pequeño delay antes de retrieveServices
+  await new Promise(r => setTimeout(r, 150));
 
-  return peripheralInfo; // <- para poder await desde tu pantalla
+  const peripheralInfo: any = await BleManager.retrieveServices(id);
+  // Normaliza servicios a string lowercase
+  const services: string[] = Array.isArray(peripheralInfo?.services)
+    ? peripheralInfo.services.map((s: any) =>
+      (s?.uuid ?? String(s)).toString().toLowerCase()
+    )
+    : [];
+
+  // Si más adelante lees el serial en nativo, ponlo aquí; de momento null
+  const serial: string | null = null;
+
+  // Nombre si lo tienes cacheado
+  const name: string | null =
+    peripheralInfo?.advertising?.localName ??
+    peripheralInfo?.name ??
+    null;
+
+  return {
+    id,
+    name,
+    services,
+    serial,
+  };
 };
+
 
 export const bleSubscribeGeneric = async (
   serviceUUID: string,
@@ -286,10 +323,9 @@ const incrementNotifyCounter = () => {
 
 
 
-
-
-
-
-
-
-
+// export function readSerialLabel(id: string) {
+//   throw new Error('Function not implemented.');
+// }
+// export function readSerialLabel(id: string) {
+//   throw new Error('Function not implemented.');
+// }

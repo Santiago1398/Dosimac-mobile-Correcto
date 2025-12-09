@@ -15,56 +15,56 @@ import Drsuccess from '../screens/DosimacRegistration/dr-success';
 const DRegistationStack = createStackNavigator();
 
 
-export const DRStackNavigator = ()=> {
-   
-   const navigator = useNavigation();
-   
+export const DRStackNavigator = () => {
 
-   useEffect(()=>{
+   const navigator = useNavigation();
+
+
+   useEffect(() => {
       navigator.setOptions({
-        headerShown: false,
+         headerShown: false,
          // headerStyle:{
          //     elevation:15,
          // },
-        
 
-        
-        
+
+
+
       });
-  
-    }, [navigator] );
-       
-  return (
-   <DRegistationStack.Navigator
-      
-      screenOptions={
-         {
-         headerShown: false,
-         headerStyle:{
-            elevation:5,
-         },
 
-      }}
-   >
+   }, [navigator]);
 
-      <DRegistationStack.Screen name="DR-NEWUPDATE" component={Drnewupdate} />
-      <DRegistationStack.Screen name="DR-STARTSCAN" component={DRstartscanningScreen} />
-      <DRegistationStack.Screen name="DR-SCANRESULTS" component={DRScanResultsScreen} />
-      <DRegistationStack.Screen name="DR-SETUP" component={DRSetup} 
-            options={{ title: 'Dosimac Setup',headerShown: true, headerLeft:()=>null,headerStyle:{elevation:5} }}
-      
-      />
-      <DRegistationStack.Screen name="DR-SUCCESS" component={Drsuccess} />
-      {/* <DRegistationStack.Screen name="DR-SETUP" component={TopTabDrSetupNavigator} 
+   return (
+      <DRegistationStack.Navigator
+
+         screenOptions={
+            {
+               headerShown: false,
+               headerStyle: {
+                  elevation: 5,
+               },
+
+            }}
+      >
+
+         <DRegistationStack.Screen name="DR-NEWUPDATE" component={Drnewupdate} />
+         <DRegistationStack.Screen name="DR-STARTSCAN" component={DRstartscanningScreen} />
+         <DRegistationStack.Screen name="DR-SCANRESULTS" component={DRScanResultsScreen} />
+         <DRegistationStack.Screen name="DR-SETUP" component={DRSetup}
+            options={{ title: 'Dosimac Setup', headerShown: true, headerLeft: () => null, headerStyle: { elevation: 5 } }}
+
+         />
+         <DRegistationStack.Screen name="DR-SUCCESS" component={Drsuccess} />
+         {/* <DRegistationStack.Screen name="DR-SETUP" component={TopTabDrSetupNavigator} 
             options={{ title: 'Dosimac Setup',headerShown: true, headerLeft:()=>null,headerStyle:{elevation:5} }}
             //screenOptions={{}}
       /> */}
-      
-      
-      {/* <DRegistationStack.Screen name="View State" component={StateViewScreen} /> */}
 
 
-   </DRegistationStack.Navigator>
-    
-  );
+         {/* <DRegistationStack.Screen name="View State" component={StateViewScreen} /> */}
+
+
+      </DRegistationStack.Navigator>
+
+   );
 };

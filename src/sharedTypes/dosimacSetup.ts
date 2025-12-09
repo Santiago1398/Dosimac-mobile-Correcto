@@ -14,6 +14,7 @@ export interface DosimacSetup {
 
 
 export interface DosimacInfo extends DosimacSetup {
+   current(current: any): unknown;
    deviceIp: string;
    gateWay: string;
    subnetMask: string;

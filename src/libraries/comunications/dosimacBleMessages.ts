@@ -6,8 +6,12 @@ import { Parser } from "./cti-parser";
 import { DosimacInfo, DosimacSetup } from '../../sharedTypes/dosimacSetup';
 import { useState } from "react";
 import { stmStore } from "../../stores/store";
+import { registerDosimacNotifyHandler } from "../../device/ble/bleLibrary.web";
 
-
+registerDosimacNotifyHandler((arr: number[]) => {
+   const buf = Buffer.from(arr);
+   pcomProccessResponse(buf, buf.length);
+});
 
 
 //DEFINICION DE TIPOS ********************************************************************
@@ -30,16 +34,16 @@ type STMinfo = {
 
 
 export type MasterState = {
-   actualJob: number,
-   timerId: NodeJS.Timeout,
-   isInitialized: boolean,
+   actualJob: number;
+   timerId: ReturnType<typeof setTimeout> | null;
+   isInitialized: boolean;
    bleDevice: string;
    dInfoComState: number;
    dInfomanState: number;
    forceStop: boolean;
    unControlError: boolean;
+};
 
-}
 
 
 //DEFINICION DE VARIABLES ****************************************************************     
@@ -62,7 +66,8 @@ export let dosimacInfo: DosimacInfo = {
    phase: 0,
    deviceNumber: 0,
    nfcTag: "",
-   corral: 0
+   corral: 0,
+   current(current: any) { return null; }
 };
 export let dosimacSetup: DosimacSetup = {
    ssid: "",
@@ -83,7 +88,16 @@ let requestState: STMinfo = { state: 0, responseRecieved: 0, waitRetries: 0, sta
 let setupState: STMinfo = { state: 0, responseRecieved: 0, waitRetries: 0, stateRetries: 0, error: 0 };
 let inicialState: STMinfo = { state: 0, responseRecieved: 0, waitRetries: 0, stateRetries: 0, error: 0 };
 
-let masterState: MasterState = { actualJob: 0, timerId: undefined, isInitialized: false, bleDevice: "", dInfoComState: -1, dInfomanState: 0, forceStop: false, unControlError: false };
+let masterState: MasterState = {
+   actualJob: 0,
+   timerId: null,
+   isInitialized: false,
+   bleDevice: "",
+   dInfoComState: -1,
+   dInfomanState: 0,
+   forceStop: false,
+   unControlError: false,
+};
 
 // const stmError = stmStore((state) => state.error);
 // const stmSubState = stmStore((state) => state.subState);
@@ -199,6 +213,17 @@ export const pcomDosimacSetup = () => {
    let payLoad: Buffer;
    let buff1: iFrameMsg;
    console.log("Call to tmsgDosimacSetup*****")
+   console.log("[WEB][SETUP] dosimacSetup ANTES DE payloadSetup:", {
+      ssid: dosimacSetup.ssid,
+      wifiPassword: dosimacSetup.wifiPassword,
+      serverIp: dosimacSetup.serverIp,
+      deviceType: dosimacSetup.deviceType,
+      phase: dosimacSetup.phase,
+      deviceNumber: dosimacSetup.deviceNumber,
+      corral16: dosimacSetup.corral,
+      corral32: (dosimacSetup as any).corral32 ?? null,
+      swVersion: dosimacInfo.swVersion,
+   });
 
 
    payLoad = payloadSetup()
@@ -267,57 +292,145 @@ export const pcomDosimacSetup = () => {
 // }
 
 // === ANDROID: dosimacBleMessages.ts ===
+// const payloadSetup = (): Buffer => {
+//    console.log("Inside payloadSetup");
+
+//    const isI = dosimacSetup.deviceType === 200;
+//    const isG = dosimacSetup.deviceType === 203;
+//    const sw = dosimacInfo.swVersion || 0;
+//    const allowUint32 = (isI && sw >= 155) || (isG && sw >= 134);
+
+//    const baseLen = 148;                  // layout clásico
+//    const extraLen = allowUint32 ? 4 : 0;  // +4 al final si usamos corral32
+//    const payLoad = Buffer.alloc(baseLen + extraLen);
+
+//    // Cabecera
+//    payLoad.writeUInt16LE(1, 0); // Version
+//    payLoad.writeUInt16LE(1, 2); // Tipo => Setup configuration
+
+//    // Cadenas
+//    payLoad.write(dosimacSetup.ssid, 4, 32, 'utf16le'); // 4..67 (64B)
+//    payLoad.write(dosimacSetup.wifiPassword, 68, 32, 'ascii');   // 68..99
+//    payLoad.write(dosimacSetup.serverIp, 100, 32, 'ascii');   // 100..131
+
+//    // Campos fijos
+//    payLoad.writeUInt16LE(dosimacSetup.deviceType, 132);
+//    payLoad.writeUInt8(dosimacSetup.phase, 134);
+//    payLoad.writeUInt8(dosimacSetup.deviceNumber, 135);
+
+//    // 136..143 NFC (queda en 0 si no lo usas)
+
+//    // Corral 16-bit legado en 144..145 (si hay 32-bit, aquí va 0)
+//    payLoad.writeUInt16LE(allowUint32 ? 0 : dosimacSetup.corral, 144);
+
+//    // Reserva 146..147
+//    payLoad.writeUInt16LE(9, 146);
+
+//    // Corral 32-bit solo si procede, AL FINAL (offset 148..151)
+//    if (allowUint32) {
+//       const c32 = (dosimacSetup as any).corral32 ?? 0;
+//       payLoad.writeUInt32LE(c32, 148);
+//    }
+
+//    console.log(
+//       `[DOSIMAC][SETUP] ${new Date().toISOString()} ` +
+//       `build payload: len=${payLoad.length}, sw=${sw}, type=${dosimacSetup.deviceType}, ` +
+//       `allowUint32=${allowUint32}, corral16=${allowUint32 ? 0 : dosimacSetup.corral}, ` +
+//       `corral32=${(dosimacSetup as any).corral32 ?? 0}`
+//    );
+
+//    console.log("End payloadSetup");
+//    return payLoad;
+// };
+
 const payloadSetup = (): Buffer => {
    console.log("Inside payloadSetup");
 
    const isI = dosimacSetup.deviceType === 200;
    const isG = dosimacSetup.deviceType === 203;
    const sw = dosimacInfo.swVersion || 0;
-   const allowUint32 = (isI && sw >= 155) || (isG && sw >= 134);
+   const allowUint32 =
+      (isI && sw >= 155) ||
+      (isG && sw >= 134);
 
-   const baseLen = 148;                  // layout clásico
-   const extraLen = allowUint32 ? 4 : 0;  // +4 al final si usamos corral32
-   const payLoad = Buffer.alloc(baseLen + extraLen);
+   // 🔥 CAMBIO CRÍTICO: Tamaño variable según versión
+   const baseLen = 148;
+   const extraLen = allowUint32 ? 4 : 0;
+   const totalLen = baseLen + extraLen;
+
+   console.log("[PAYLOAD] ===== ANÁLISIS DETALLADO =====");
+   console.log("[PAYLOAD] deviceType:", dosimacSetup.deviceType);
+   console.log("[PAYLOAD] swVersion:", sw);
+   console.log("[PAYLOAD] isI:", isI, "isG:", isG);
+   console.log("[PAYLOAD] allowUint32:", allowUint32);
+   console.log("[PAYLOAD] corral (uint16):", dosimacSetup.corral);
+   console.log("[PAYLOAD] corral32:", (dosimacSetup as any).corral32);
+   console.log("[PAYLOAD] totalLen:", totalLen, `(${baseLen} + ${extraLen})`);
+   console.log("[PAYLOAD] ===========================");
+
+   // 🔥 CAMBIO: Tamaño variable
+   const payLoad = Buffer.alloc(totalLen);
 
    // Cabecera
-   payLoad.writeUInt16LE(1, 0); // Version
+   payLoad.writeUInt16LE(1, 0); // Versión
    payLoad.writeUInt16LE(1, 2); // Tipo => Setup configuration
 
    // Cadenas
-   payLoad.write(dosimacSetup.ssid, 4, 32, 'utf16le'); // 4..67 (64B)
-   payLoad.write(dosimacSetup.wifiPassword, 68, 32, 'ascii');   // 68..99
-   payLoad.write(dosimacSetup.serverIp, 100, 32, 'ascii');   // 100..131
+   payLoad.write(dosimacSetup.ssid, 4, 32, "utf16le");    // 4..67 (64B)
+   payLoad.write(dosimacSetup.wifiPassword, 68, 32, "ascii"); // 68..99
+   payLoad.write(dosimacSetup.serverIp, 100, 32, "ascii");    // 100..131
 
    // Campos fijos
-   payLoad.writeUInt16LE(dosimacSetup.deviceType, 132);
-   payLoad.writeUInt8(dosimacSetup.phase, 134);
-   payLoad.writeUInt8(dosimacSetup.deviceNumber, 135);
+   payLoad.writeUInt16LE(dosimacSetup.deviceType, 132); // 132..133
+   payLoad.writeUInt8(dosimacSetup.phase, 134);         // 134
+   payLoad.writeUInt8(dosimacSetup.deviceNumber, 135);  // 135
 
-   // 136..143 NFC (queda en 0 si no lo usas)
-
-   // Corral 16-bit legado en 144..145 (si hay 32-bit, aquí va 0)
-   payLoad.writeUInt16LE(allowUint32 ? 0 : dosimacSetup.corral, 144);
-
-   // Reserva 146..147
-   payLoad.writeUInt16LE(9, 146);
-
-   // Corral 32-bit solo si procede, AL FINAL (offset 148..151)
    if (allowUint32) {
+      // 🔥 VERSIÓN NUEVA: corral32
       const c32 = (dosimacSetup as any).corral32 ?? 0;
+
+      // NFC a 0 (136..143)
+      payLoad.fill(0, 136, 144);
+
+      // Corral16 legado a 0 (144..145)
+      payLoad.writeUInt16LE(0, 144);
+
+      // Reserva (146..147)
+      payLoad.writeUInt16LE(9, 146);
+
+      // 🔥 CRÍTICO: Corral32 AL FINAL (148..151)
       payLoad.writeUInt32LE(c32, 148);
+
+      console.log(`[PAYLOAD] ✅ Modo corral32: ${c32} en posición 148-151`);
+   } else {
+      // 🔥 VERSIÓN ANTIGUA: corral16
+
+      // NFC a 0 (136..143)
+      payLoad.fill(0, 136, 144);
+
+      // Corral16 (144..145)
+      payLoad.writeUInt16LE(dosimacSetup.corral, 144);
+
+      // Reserva (146..147)
+      payLoad.writeUInt16LE(9, 146);
+
+      console.log(`[PAYLOAD] ✅ Modo corral16: ${dosimacSetup.corral} en posición 144-145`);
    }
 
    console.log(
       `[DOSIMAC][SETUP] ${new Date().toISOString()} ` +
-      `build payload: len=${payLoad.length}, sw=${sw}, type=${dosimacSetup.deviceType}, ` +
-      `allowUint32=${allowUint32}, corral16=${allowUint32 ? 0 : dosimacSetup.corral}, ` +
+      `len=${payLoad.length}, sw=${sw}, type=${dosimacSetup.deviceType}, ` +
+      `allowUint32=${allowUint32}, corral16=${dosimacSetup.corral}, ` +
       `corral32=${(dosimacSetup as any).corral32 ?? 0}`
    );
+
+   // 🔥 NUEVO: Log del payload completo en HEX para debug
+   console.log("[PAYLOAD] Payload HEX:", payLoad.toString('hex'));
+   console.log("[PAYLOAD] Últimos 8 bytes:", payLoad.slice(-8).toString('hex'));
 
    console.log("End payloadSetup");
    return payLoad;
 };
-
 export const pcomProccessResponse = (response: Buffer, length: number) => {
 
    parser.doParser(response, length);
@@ -343,6 +456,8 @@ export const pcomResponseClassifier = () => {
             setupState.responseRecieved = 1;
             break;
          case 0x02:
+            setupState.responseRecieved = 1;
+
             console.log("--- Recibida trama de configuración ---")
             break;
 
@@ -535,45 +650,144 @@ const inicializeSMS = (man: STMinfo): STMinfo => {
    return man;
 
 }
-
-export const pcomActiveRequestState = () => {
-   //Inicialize the state machine
-
-
-   if (masterState.timerId !== undefined)
+const startMasterStateMachine = () => {
+   if (masterState.timerId) {
       clearTimeout(masterState.timerId);
+      masterState.timerId = null;
+   }
 
+   masterState.timerId = setTimeout(() => {
+      masterStateMachine();
+   }, 200); // pequeño retraso inicial
+};
+
+
+export const pcomActiveRequestState = (deviceId: string) => {  // 🔥 Recibe deviceId
+   console.log("[pcomActiveRequestState] ===== INICIANDO REQUEST STATE =====");
+
+   // 🔥 Aquí SÍ reseteamos TODO porque vamos a pedir info nueva
+   resetAllStates();
+
+   if (masterState.timerId !== undefined) {
+      clearTimeout(masterState.timerId);
+   }
 
    inicializeSMS(requestState);
-   pcomInicializeDosimacInfo();
+   inicializeSMS(inicialState);
+
    masterState.forceStop = false;
    masterState.unControlError = false;
+   masterState.isInitialized = false;
+   masterState.bleDevice = deviceId;
    masterState.actualJob = 1;
-   // setStmJob(masterState.actualJob);
-   //interfaceManState.SetActualJob(masterState.actualJob);
 
-   masterState.timerId = masterStateMachine();
+   startMasterStateMachine();
+};
+// Añadir esta función NUEVA para reset selectivo
+const resetStateMachines = () => {
+   console.log("[RESET] Reseteando solo máquinas de estado");
 
+   // Resetear máquinas de estado
+   requestState = { state: 0, responseRecieved: 0, waitRetries: 0, stateRetries: 0, error: 0 };
+   setupState = { state: 0, responseRecieved: 0, waitRetries: 0, stateRetries: 0, error: 0 };
+   inicialState = { state: 0, responseRecieved: 0, waitRetries: 0, stateRetries: 0, error: 0 };
 
-}
-
-
-export const pcomActiveSetupState = () => {
-
-   if (masterState.timerId !== undefined)
+   // Resetear masterState
+   if (masterState.timerId) {
       clearTimeout(masterState.timerId);
+   }
+   const oldDevice = masterState.bleDevice;
+   masterState = {
+      actualJob: 0,
+      timerId: null,
+      isInitialized: false,
+      bleDevice: oldDevice,
+      dInfoComState: -1,
+      dInfomanState: 0,
+      forceStop: false,
+      unControlError: false,
+   };
+
+   console.log("[RESET] ✅ Máquinas de estado reseteadas");
+};
+
+// Función existente - ahora también resetea dosimacInfo
+const resetAllStates = () => {
+   console.log("[RESET] Reseteando TODOS los estados (incluido dosimacInfo)");
+
+   resetStateMachines();
+
+   // Resetear dosimacInfo
+   pcomInicializeDosimacInfo();
+
+   console.log("[RESET] ✅ Todo reseteado (estados + dosimacInfo)");
+};
+// const resetAllStates = () => {
+//    console.log("[RESET] Reseteando TODOS los estados antes de nueva configuración");
+
+//    // Resetear máquinas de estado
+//    requestState = { state: 0, responseRecieved: 0, waitRetries: 0, stateRetries: 0, error: 0 };
+//    setupState = { state: 0, responseRecieved: 0, waitRetries: 0, stateRetries: 0, error: 0 };
+//    inicialState = { state: 0, responseRecieved: 0, waitRetries: 0, stateRetries: 0, error: 0 };
+
+//    // Resetear masterState
+//    if (masterState.timerId) {
+//       clearTimeout(masterState.timerId);
+//    }
+//    const oldDevice = masterState.bleDevice;
+//    masterState = {
+//       actualJob: 0,
+//       timerId: null,
+//       isInitialized: false,
+//       bleDevice: oldDevice,
+//       dInfoComState: -1,
+//       dInfomanState: 0,
+//       forceStop: false,
+//       unControlError: false,
+//    };
+
+//    // Resetear dosimacInfo
+//    pcomInicializeDosimacInfo();
+
+//    console.log("[RESET] ✅ Todos los estados reseteados");
+// };
+
+
+export const pcomActiveSetupState = (deviceId: string) => {
+   console.log("[pcomActiveSetupState] ===== INICIANDO SETUP STATE =====");
+   console.log("[pcomActiveSetupState] ANTES del reset:");
+   console.log("[pcomActiveSetupState] dosimacSetup.corral:", dosimacSetup.corral);
+   console.log("[pcomActiveSetupState] dosimacSetup.deviceNumber:", dosimacSetup.deviceNumber);
+   console.log("[pcomActiveSetupState] dosimacInfo.swVersion:", dosimacInfo.swVersion);
+
+   // 🔥 CAMBIO: Usar resetStateMachines en vez de resetAllStates
+   // Esto NO resetea dosimacInfo, preservando swVersion
+   resetStateMachines();
+
+   if (masterState.timerId !== undefined) {
+      clearTimeout(masterState.timerId);
+   }
 
    inicializeSMS(setupState);
+   inicializeSMS(inicialState);
+
    masterState.forceStop = false;
    masterState.unControlError = false;
+   masterState.isInitialized = false;
+
+   // 🔥 CRÍTICO: Establecer el device ID ANTES de arrancar
+   masterState.bleDevice = deviceId;
+
+   console.log("[pcomActiveSetupState] DESPUÉS del reset:");
+   console.log("[pcomActiveSetupState] dosimacSetup.corral:", dosimacSetup.corral);
+   console.log("[pcomActiveSetupState] dosimacSetup.deviceNumber:", dosimacSetup.deviceNumber);
+   console.log("[pcomActiveSetupState] dosimacInfo.swVersion:", dosimacInfo.swVersion);
+   console.log("[pcomActiveSetupState] bleDevice establecido:", masterState.bleDevice);
 
    masterState.actualJob = 2;
-   //setStmJob(masterState.actualJob);
-   // interfaceManState.SetActualJob(masterState.actualJob);
 
-   masterState.timerId = masterStateMachine();
-
-}
+   startMasterStateMachine();
+};
 
 export const pcomSetDeviceId = (id: string) => {
 
@@ -584,66 +798,68 @@ export const pcomSetDeviceId = (id: string) => {
 
 
 export const pcomStopStateMachine = () => {
-
-   // if (masterState.timerId !== undefined)
-   clearTimeout(masterState.timerId);
-
+   if (masterState.timerId) {
+      clearTimeout(masterState.timerId);
+      masterState.timerId = null;
+   }
 
    bleDisconnection(masterState.bleDevice);
    masterState.actualJob = 0;
-   masterState.timerId = null;
    masterState.isInitialized = false;
    masterState.forceStop = true;
+};
 
-
-}
 
 export const pcomCheckStatus = (): MasterState => {
 
    return masterState;
 }
 
+// Esta función hace el trabajo y reprograma el siguiente ciclo
 const masterStateMachine = () => {
+   let delay: number = 200; // valor por defecto
 
-   let delay: number = 200; //Pequeño retraso para darle tiempo a conectarse
+   if (!masterState.isInitialized) {
+      if (masterState.forceStop) {
+         // Si quieres que se pare del todo, simplemente no reprogramas nada
+         return;
+      }
+      delay = inicialStateMachine();
+   } else {
+      switch (masterState.actualJob) {
+         case 0:
+            delay = 100;
+            break;
+         case 1:
+            delay = stateMachineRequestState();
+            break;
+         case 2:
+            delay = stateMachineSetupConfiguration();
+            break;
+         default:
+            delay = 0;
+            break;
+      }
+   }
 
-   let msTimer = setTimeout(
+   // Por seguridad: si hemos marcado que hay que parar, no continuamos
+   if (masterState.forceStop) {
+      return;
+   }
+
+   // ---- parte importante: limpiar y reprogramar ----
+   if (masterState.timerId) {
+      clearTimeout(masterState.timerId);
+      masterState.timerId = null;
+   }
+
+   masterState.timerId = setTimeout(() => {
+      masterStateMachine();
+   }, delay);
+};
 
 
-      function manStateTimer() {
 
-         if (!masterState.isInitialized) {
-            if (!masterState.forceStop)
-               delay = inicialStateMachine();
-
-         }
-         else {
-            switch (masterState.actualJob) {
-               case 0:
-                  delay = 100;
-                  break;
-
-               case 1:
-                  delay = stateMachineRequestState();
-                  break;
-               case 2:
-                  delay = stateMachineSetupConfiguration();
-                  break;
-               default:
-                  delay = 0;
-                  break;
-            }
-         }
-
-
-         msTimer = setTimeout(manStateTimer, delay);
-         masterState.timerId = msTimer;
-
-      }, delay);
-
-   return msTimer;
-
-}
 
 const inicialStateMachine = (): number => {
 
@@ -651,21 +867,25 @@ const inicialStateMachine = (): number => {
 
    switch (inicialState.state) {
       case 0:
+         console.log("Connecting to BLE Device: ", masterState.bleDevice);
          bleConnection(masterState.bleDevice);
          inicialState.state++;
-         return 1500; //Wait 1 second before send MTU
+         return 3000; //Wait 1 second before send MTU
          break;
       case 1:
+         console.log("Subscribing to notifications");
          bleSubscribeNotify();
          inicialState.state++;
          return 200; //Wait 1 second before send MTU
          break;
       case 2:
+         console.log("Requesting MTU");
          blehandleMTU();
          inicialState.state++;
          return 200; //
          break;
       case 3:
+         console.log("Initialization completed");
          masterState.isInitialized = true;
          inicialState.state = 0;
          return 100; //
@@ -810,7 +1030,7 @@ export const stateMachineSetupConfiguration = (): number => {
          break;
       case 3:
 
-         pcomActiveRequestState();
+         pcomActiveRequestState(masterState.bleDevice);
          return 500;
 
    }
