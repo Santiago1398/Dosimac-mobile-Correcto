@@ -1,10 +1,8 @@
-// 
-
-
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const STORAGE_KEY = "@cti_portal_base_url";
-const TIMEOUT_MS = 10000;
+const TIMEOUT_INICIO_MS = 1500;
+const TIMEOUT_NORMAL_MS = 8000;
 
 function construirUrlValidateToken(baseUrl: string) {
     const url = new URL(baseUrl);
@@ -15,7 +13,10 @@ function construirUrlValidateToken(baseUrl: string) {
     return url.toString();
 }
 
-export async function validarTokenEspada(token: string) {
+export async function validarTokenEspada(
+    token: string,
+    timeoutMs = TIMEOUT_INICIO_MS
+) {
     const baseUrlGuardada = await AsyncStorage.getItem(STORAGE_KEY);
 
     if (!baseUrlGuardada) {
@@ -32,7 +33,7 @@ export async function validarTokenEspada(token: string) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
         controller.abort();
-    }, TIMEOUT_MS);
+    }, timeoutMs);
 
     try {
         const respuesta = await fetch(endpoint, {
@@ -80,3 +81,5 @@ export async function validarTokenEspada(token: string) {
         throw new Error("No se pudo conectar con el servidor.");
     }
 }
+
+export { TIMEOUT_INICIO_MS, TIMEOUT_NORMAL_MS };

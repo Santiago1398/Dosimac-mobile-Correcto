@@ -9,6 +9,8 @@ import { useTranslation } from "react-i18next";
 
 
 const STORAGE_KEY = "@cti_portal_base_url";
+const TIMEOUT_PORTAL_INICIAL_MS = 1500;
+const TIMEOUT_PORTAL_REINTENTO_MS = 5000;
 
 function construirUrlPortalDesdeApi(baseUrl: string, token: string) {
   const urlApi = new URL(baseUrl);
@@ -23,7 +25,7 @@ function construirUrlPortalDesdeApi(baseUrl: string, token: string) {
   return urlApi.toString();
 }
 
-async function comprobarPortalConTimeout(url: string, timeoutMs = 10000) {
+async function comprobarPortalConTimeout(url: string, timeoutMs = TIMEOUT_PORTAL_INICIAL_MS) {
   const controlador = new AbortController();
 
   const timeout = setTimeout(() => {
@@ -110,40 +112,43 @@ export const PortalScreen = () => {
     prepararUrl();
   }, [token, isHydrated]);
 
-  useEffect(() => {
-    const validarPortal = async () => {
-      if (!urlPortal) return;
+ useEffect(() => {
+  const validarPortal = async () => {
+    if (!urlPortal) return;
 
-      try {
-        setComprobandoPortal(true);
-        setErrorPortal(null);
-        setPortalDisponible(false);
+    try {
+      setComprobandoPortal(true);
+      setErrorPortal(null);
+      setPortalDisponible(false);
 
-        const resultado = await comprobarPortalConTimeout(urlPortal, 10000);
+      const timeoutActual =
+        reloadKey === 0 ? TIMEOUT_PORTAL_INICIAL_MS : TIMEOUT_PORTAL_REINTENTO_MS;
 
-        if (resultado.ok || resultado.status === 200 || resultado.status === 302) {
-          setPortalDisponible(true);
-          return;
-        }
+      const resultado = await comprobarPortalConTimeout(urlPortal, timeoutActual);
 
-        if (resultado.timeout) {
-          setErrorPortal(t("portal_connectionTimeout"));
-          return;
-        }
-
-        if (resultado.status > 0) {
-          setErrorPortal(t("portal_httpError", { status: resultado.status }));
-          return;
-        }
-
-        setErrorPortal(t("portal_connectionError"));
-      } finally {
-        setComprobandoPortal(false);
+      if (resultado.ok || resultado.status === 200 || resultado.status === 302) {
+        setPortalDisponible(true);
+        return;
       }
-    };
 
-    validarPortal();
-  }, [urlPortal, reloadKey]);
+      if (resultado.timeout) {
+        setErrorPortal(t("portal_connectionTimeout"));
+        return;
+      }
+
+      if (resultado.status > 0) {
+        setErrorPortal(t("portal_httpError", { status: resultado.status }));
+        return;
+      }
+
+      setErrorPortal(t("portal_connectionError"));
+    } finally {
+      setComprobandoPortal(false);
+    }
+  };
+
+  validarPortal();
+}, [urlPortal, reloadKey]);
 
   if (!isHydrated || preparandoUrl) {
     return (

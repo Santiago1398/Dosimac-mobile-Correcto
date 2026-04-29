@@ -62,10 +62,10 @@ export const RootNavigator = () => {
                 // Mantener sesión
                 setTokenValidado(true);
             } catch {
-                Alert.alert(
-                    'Error de red',
-                    'No se pudo validar la sesión con el servidor.'
-                );
+                // Alert.alert(
+                //     'Error de red',
+                //     'No se pudo validar la sesión con el servidor.'
+                // );
 
                 // Mantener sesión
                 setTokenValidado(true);
