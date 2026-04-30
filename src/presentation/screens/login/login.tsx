@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import React, { useState } from "react";
 import {
 	Image,
@@ -14,6 +15,7 @@ import {
 } from "react-native";
 import { Button, Dialog, Portal, TextInput as PaperInput } from "react-native-paper";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useNavigation } from "@react-navigation/native";
 import { useAuthStore } from "../../../stores/authStore";
 import { HamburgerMenu } from "../../components/shared/HamburgerMenu";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -26,15 +28,12 @@ import {
 	toInputHost,
 } from "../../../stores/ipConfig";
 
-
 const BG = require("../../../assets/images/TecLogin.jpg");
 const LOGO = require("../../../assets/images/logo-cti.png");
 
-
-
 export const LoginScreen = () => {
-
 	const { t } = useTranslation();
+	const navigation = useNavigation<any>();
 
 	const [userName, setUserName] = useState("");
 	const [pass, setPass] = useState("");
@@ -87,6 +86,7 @@ export const LoginScreen = () => {
 			}
 
 			login(token, { email: usernameLimpio });
+			navigation.getParent()?.replace("Privado");
 		} catch {
 			Alert.alert(t("login_networkErrorTitle"), t("login_networkErrorMessage"));
 		} finally {
@@ -122,7 +122,8 @@ export const LoginScreen = () => {
 			Alert.alert(
 				t("login_invalidIpTitle"),
 				t("login_invalidIpMessage")
-			); return;
+			);
+			return;
 		}
 
 		try {
@@ -193,7 +194,9 @@ export const LoginScreen = () => {
 									{t("login_subtitle")}
 								</Text>
 
-								<Text className="text-slate-700 mb-2 font-semibold">{t("login_username")}</Text>
+								<Text className="text-slate-700 mb-2 font-semibold">
+									{t("login_username")}
+								</Text>
 								<View className="flex-row items-center h-10 rounded-lg bg-slate-50 border border-slate-200 px-3">
 									<Ionicons name="person-outline" size={14} color="#64748b" />
 									<TextInput
@@ -226,7 +229,7 @@ export const LoginScreen = () => {
 										returnKeyType="done"
 									/>
 
-									<TouchableOpacity onPress={() => setShowPass(v => !v)} style={{ paddingLeft: 6 }}>
+									<TouchableOpacity onPress={() => setShowPass((v) => !v)} style={{ paddingLeft: 6 }}>
 										<Ionicons
 											name={showPass ? "eye-off-outline" : "eye-outline"}
 											size={14}
@@ -238,8 +241,9 @@ export const LoginScreen = () => {
 								<TouchableOpacity
 									onPress={onSubmit}
 									disabled={disabled}
-									className={`mt-5 rounded-xl py-3 items-center ${disabled ? "bg-indigo-300" : "bg-indigo-600"
-										}`}
+									className={`mt-5 rounded-xl py-3 items-center ${
+										disabled ? "bg-indigo-300" : "bg-indigo-600"
+									}`}
 								>
 									<Text className="text-white font-bold text-base">
 										{cargando ? t("login_loading") : t("login_button")}
@@ -255,7 +259,11 @@ export const LoginScreen = () => {
 				</KeyboardAvoidingView>
 
 				<Portal>
-					<Dialog visible={ipModalVisible} dismissable={!guardandoIp} onDismiss={() => setIpModalVisible(false)}>
+					<Dialog
+						visible={ipModalVisible}
+						dismissable={!guardandoIp}
+						onDismiss={() => setIpModalVisible(false)}
+					>
 						<Dialog.Title>{t("login_ipRequiredTitle")}</Dialog.Title>
 						<Dialog.Content>
 							<Text style={{ marginBottom: 12, color: "#111827" }}>
@@ -277,7 +285,11 @@ export const LoginScreen = () => {
 							<Button onPress={() => setIpModalVisible(false)} disabled={guardandoIp}>
 								{t("login_cancel")}
 							</Button>
-							<Button onPress={onGuardarIpYContinuar} loading={guardandoIp} disabled={guardandoIp}>
+							<Button
+								onPress={onGuardarIpYContinuar}
+								loading={guardandoIp}
+								disabled={guardandoIp}
+							>
 								{t("login_accept")}
 							</Button>
 						</Dialog.Actions>

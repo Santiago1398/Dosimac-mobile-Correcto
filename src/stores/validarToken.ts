@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const STORAGE_KEY = "@cti_portal_base_url";
-const TIMEOUT_INICIO_MS = 1500;
+const TIMEOUT_INICIO_MS = 2000;
 const TIMEOUT_NORMAL_MS = 8000;
 
 function construirUrlValidateToken(baseUrl: string) {
